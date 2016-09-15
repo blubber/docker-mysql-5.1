@@ -20,21 +20,31 @@ if [ ! -d '/var/lib/mysql/mysql' -a "${1%_safe}" = 'mysqld' ]; then
 		GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION ;
 		DROP DATABASE IF EXISTS test ;
 	EOSQL
-	
+
 	if [ "$MYSQL_DATABASE" ]; then
 		echo "CREATE DATABASE IF NOT EXISTS $MYSQL_DATABASE ;" >> "$TEMP_FILE"
 	fi
-	
+
 	if [ "$MYSQL_USER" -a "$MYSQL_PASSWORD" ]; then
 		echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;" >> "$TEMP_FILE"
-		
+
 		if [ "$MYSQL_DATABASE" ]; then
 			echo "GRANT ALL ON $MYSQL_DATABASE.* TO '$MYSQL_USER'@'%' ;" >> "$TEMP_FILE"
 		fi
 	fi
-	
+
 	echo 'FLUSH PRIVILEGES ;' >> "$TEMP_FILE"
-	
+
+    for f in /docker-entrypoint-initdb.d/*; do
+        case "$f" in
+            *.sh)     echo "$0: running $f"; . "$f" ;;
+            *.sql)    echo "$0: running $f"; "${mysql[@]}" < "$f"; echo ;;
+            *.sql.gz) echo "$0: running $f"; gunzip -c "$f" | "${mysql[@]}"; echo ;;
+            *)        echo "$0: ignoring $f" ;;
+        esac
+        echo
+    done
+
 	set -- "$@" --init-file="$TEMP_FILE"
 fi
 

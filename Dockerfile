@@ -36,6 +36,7 @@ WORKDIR /usr/local/mysql
 VOLUME /var/lib/mysql
 
 COPY docker-entrypoint.sh /entrypoint.sh
+RUN mkdir /docker-entrypoint-initdb.d
 
 ENTRYPOINT ["/entrypoint.sh"]
 
